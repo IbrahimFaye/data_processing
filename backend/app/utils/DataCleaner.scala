@@ -69,10 +69,13 @@ object DataCleaner {
   }
 
   private def safeNormalize(df: DataFrame): DataFrame = {
+    val firstColumn = df.columns.head
+
     val numericCols = df.schema.fields
-      .filter(f => f.dataType.isInstanceOf[NumericType] && f.name != "id")
+      .filter(f => f.dataType.isInstanceOf[NumericType] && f.name != firstColumn)
       .map(_.name)
 
+  
     numericCols.foldLeft(df) { (currentDF, colName) =>
       val minMax = currentDF.agg(F.min(colName), F.max(colName)).first()
       val minVal = minMax.getDouble(0)

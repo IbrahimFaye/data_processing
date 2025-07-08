@@ -21,7 +21,6 @@ class CsvController @Inject()(cc: ControllerComponents)(implicit ec: ExecutionCo
   if (!uploadsDir.exists()) uploadsDir.mkdirs()
   if (!resultsDir.exists()) resultsDir.mkdirs()
 
-  // Configuration Hadoop pour Windows
   System.setProperty("hadoop.home.dir", "C:\\hadoop")
   spark.sparkContext.hadoopConfiguration.set("mapreduce.fileoutputcommitter.algorithm.version", "2")
 
@@ -62,7 +61,6 @@ class CsvController @Inject()(cc: ControllerComponents)(implicit ec: ExecutionCo
 
   private def processFile(inputFile: File, config: CleaningConfig): Result = {
     try {
-      // 1. Lecture du fichier
       val df = spark.read
         .option("header", "true")
         .option("inferSchema", "true")
@@ -70,17 +68,15 @@ class CsvController @Inject()(cc: ControllerComponents)(implicit ec: ExecutionCo
 
       logger.info(s"Fichier chargé: ${inputFile.getName} (${df.count()} lignes)")
 
-      // 2. Nettoyage des données
       val cleanedDF = DataCleaner.clean(df, config)
       logger.info(s"Données nettoyées: ${cleanedDF.count()} lignes restantes")
 
-      // 3. Écriture du résultat
       val outputFile = new File(resultsDir, s"cleaned_${System.currentTimeMillis()}.csv")
       writeDataFrameToCsv(cleanedDF, outputFile)
 
       Ok.sendFile(
         content = outputFile,
-        fileName = _ => Some("cleaned_data.csv"), // Correction ici
+        fileName = _ => Some("cleaned_data.csv"), 
         onClose = () => Files.deleteIfExists(outputFile.toPath)
       )
     } catch {
@@ -93,10 +89,8 @@ class CsvController @Inject()(cc: ControllerComponents)(implicit ec: ExecutionCo
   private def writeDataFrameToCsv(df: DataFrame, outputFile: File): Unit = {
     val writer = new FileWriter(outputFile)
     try {
-      // Écriture de l'en-tête
       writer.write(df.columns.mkString(",") + "\n")
       
-      // Écriture des données
       df.collect().foreach { row =>
         val line = row.toSeq.map {
           case null => ""
@@ -108,4 +102,5 @@ class CsvController @Inject()(cc: ControllerComponents)(implicit ec: ExecutionCo
       writer.close()
     }
   }
+  
 }

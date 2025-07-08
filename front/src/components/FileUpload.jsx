@@ -1,12 +1,24 @@
-import React, { useState } from 'react'
-import axios from 'axios'
+import React, { useState } from 'react';
+import axios from 'axios';
+import Dashboard from './Dashboard';
 
 export default function FileUpload({ setStatus, setFileReady }) {
-  const [file, setFile] = useState(null)
+  const [file, setFile] = useState(null);
+  const [rawData, setRawData] = useState(null);
+  const [cleanedData, setCleanedData] = useState(null);
+  const [showDashboard, setShowDashboard] = useState(false);
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0])
-  }
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const csvData = event.target.result;
+      setRawData(csvData);
+    };
+    reader.readAsText(selectedFile);
+  };
 
 const handleSubmit = async (e) => {
   e.preventDefault();
@@ -18,33 +30,35 @@ const handleSubmit = async (e) => {
     const formData = new FormData();
     formData.append('csv', file);
 
+    const rawContent = await file.text();
+    setRawData(rawContent);
+
     const response = await axios.post('http://localhost:9000/upload', formData, {
-      responseType: 'blob',
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+      responseType: 'blob'
     });
 
-    if (response.data.type === "text/plain") {
-      const error = await response.data.text();
-      throw new Error(error);
-    }
+    const cleanedContent = await new Response(response.data).text();
+    setCleanedData(cleanedContent);
+    setShowDashboard(true);
 
-    // Téléchargement du fichier
     const url = window.URL.createObjectURL(response.data);
     const link = document.createElement('a');
     link.href = url;
     link.download = 'cleaned_data.csv';
-    document.body.appendChild(link);
     link.click();
-    link.remove();
 
     setStatus("Traitement réussi!");
+    setFileReady(true);
   } catch (err) {
     setStatus(`Erreur: ${err.message}`);
     console.error("Détails de l'erreur:", err);
   }
 };
+
+  if (showDashboard) {
+    return <Dashboard rawData={rawData} cleanedData={cleanedData} />;
+  }
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
       <input
@@ -57,5 +71,5 @@ const handleSubmit = async (e) => {
         Uploader & Traiter
       </button>
     </form>
-  )
+  );
 }

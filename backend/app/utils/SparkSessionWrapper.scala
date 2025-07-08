@@ -5,7 +5,6 @@ import org.apache.spark.SparkConf
 
 trait SparkSessionWrapper {
   lazy val spark: SparkSession = {
-    // Configuration qui évite complètement Hadoop
     val conf = new SparkConf()
       .setAppName("CSV Processor")
       .setMaster("local[*]")
